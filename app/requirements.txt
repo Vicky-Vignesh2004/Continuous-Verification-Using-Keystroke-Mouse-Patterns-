@@ -1,0 +1,12 @@
+flask
+numpy
+pandas
+scikit-learn
+matplotlib
+seaborn
+matplotlib
+python-dotenv
+pathlib
+sqlite3
+logging
+

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static',filename='signupdatastyle.css') }}" />
+    <title>Signup Data</title>
+</head>
+<body>
+    <div class="welcome-message">
+        <h1>Provide Additional Information</h1>
+    </div>
+
+    <div class="signupdata-container">
+        <form id="signupdata-form" action="#" method="POST">
+            <h2>Welcome to the Keystroke Dynamics Analysis</h2>
+            <p>To enhance your experience, we need to collect some additional information. This will help us analyze your keystroke dynamics and mouse movements.</p>
+            <h2>Type the following paragraph to proceed</h2>
+            <p>Please type the following paragraph to help us analyze your keystroke dynamics:</p>
+            <!-- Keystroke Text -->
+            <div class="keystroke-text">
+                <p>The quick brown fox jumps over the lazy dog near the quiet riverbank. It is a calm, peaceful day, and the animals roam freely under the wide, open sky, feeling the cool breeze blowing through the trees.</p>
+            </div>
+
+            <!-- User Input Box -->
+            <label for="user-typed-text">Your Typed Text</label>
+            <textarea id="user-typed-text" name="user-typed-text" placeholder="Type the paragraph here..." rows="6" required></textarea>
+            
+            <div class="warning-message" style="color: red; font-size: 14px; margin-top: 10px;"></div>
+
+            <!-- Mouse Movement Area Box -->
+            <div class="mouse-area">
+                <p>Move your mouse inside the box to help us capture mouse dynamics</p>
+            </div>
+
+            <button type="submit" id="submit-btn">Submit</button>
+        </form>
+    </div>
+
+    <script>
+        // Initialize data storage
+        const keystrokeData = [];
+        const mouseData = [];
+        const textarea = document.getElementById('user-typed-text');
+        const mouseArea = document.querySelector('.mouse-area');
+        const warningMessage = document.querySelector('.warning-message');
+        const submitBtn = document.getElementById('submit-btn');
+        const form = document.getElementById('signupdata-form');
+
+        // Capture keystrokes
+        textarea.addEventListener('keydown', (event) => {
+            keystrokeData.push({
+                event: 'press',
+                key: event.key,
+                time: Date.now(),
+            });
+        });
+
+        textarea.addEventListener('keyup', (event) => {
+            keystrokeData.push({
+                event: 'release',
+                key: event.key,
+                time: Date.now(),
+            });
+        });
+
+        // Capture mouse movements
+        mouseArea.addEventListener('mousemove', (event) => {
+            mouseData.push({
+                event: 'move',
+                x: event.clientX,
+                y: event.clientY,
+                time: Date.now(),
+            });
+        });
+
+        mouseArea.addEventListener('mousedown', (event) => {
+            mouseData.push({
+                event: 'click',
+                x: event.clientX,
+                y: event.clientY,
+                button: event.button,
+                pressed: true,
+                time: Date.now(),
+            });
+        });
+
+        mouseArea.addEventListener('mouseup', (event) => {
+            mouseData.push({
+                event: 'click',
+                x: event.clientX,
+                y: event.clientY,
+                button: event.button,
+                pressed: false,
+                time: Date.now(),
+            });
+        });
+
+        // Validate text input
+        textarea.addEventListener('input', () => {
+            if (textarea.value.trim() === '') {
+                warningMessage.textContent = 'Please type the paragraph to proceed.';
+            } else {
+                warningMessage.textContent = '';
+            }
+        });
+
+        // Form submission
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            try {
+                const response = await fetch('/signupdata', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        keystroke_data: keystrokeData,
+                        mouse_data: mouseData,
+                        user_typed_text: textarea.value
+                    })
+                });
+
+                // First check if response is OK
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Request failed');
+                }
+
+                // Parse the response
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.href = '/dashboard';
+                } else {
+                    alert(result.error || 'Unknown error occurred');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                try {
+                    const errorResponse = await error.response?.json();
+                    alert(errorResponse?.error || error.message || 'Failed to save data');
+                } catch {
+                    alert(error.message || 'Failed to save data');
+                }
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            }
+        });
+
+        // Disable the submit button if the textarea is empty
+        textarea.addEventListener('input', () => {
+            if (textarea.value.trim() === '') {
+                submitBtn.disabled = true;
+            } else {
+                submitBtn.disabled = false;
+            }
+        });
+        // Disable the submit button initially
+        submitBtn.disabled = true;
+        // Enable the submit button when the textarea is not empty
+        textarea.addEventListener('input', () => {
+            if (textarea.value.trim() !== '') {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>

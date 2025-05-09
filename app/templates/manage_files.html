@@ -1,0 +1,57 @@
+<!-- manage_files.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Files</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='manage_files_styles.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </nav>
+
+    <div class="container">
+        <h1>Manage Secured Files</h1>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Upload File Form -->
+        <form method="POST" action="{{ url_for('manage_files') }}" enctype="multipart/form-data">
+            <h2>Upload a File</h2>
+            <input type="file" name="file" required>
+            <input type="hidden" name="action" value="add">
+            <button type="submit">Upload File</button>
+        </form>
+
+        <!-- List of Secured Files -->
+        <h2>Your Secured Files</h2>
+        <ul>
+            {% for file in secured_files %}
+                <li>
+                    {{ file.filename }}
+                    <!-- Open Button -->
+                    <a href="{{ url_for('open_file', file_id=file['id']) }}" class="open-button">Open</a>
+                    <!-- Remove Button -->
+                    <form method="POST" action="{{ url_for('manage_files') }}" style="display: inline;">
+                        <input type="hidden" name="file_id" value="{{ file.id }}">
+                        <input type="hidden" name="action" value="remove">
+                        <button type="submit" class="remove-button">Remove</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>

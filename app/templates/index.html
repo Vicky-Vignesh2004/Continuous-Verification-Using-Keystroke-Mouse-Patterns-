@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dyn-Auth | Secure Authentication</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="#" class="logo">Dyn-Auth</a>
+            <a href="{{ url_for('login') }}" class="login">Login</a>
+        </nav>
+        <header>
+            <h1>Welcome to <span>Dyn-Auth</span></h1>
+            <img src="{{ url_for('static', filename='auth-icon.png') }}" alt="Authentication Icon" class="auth-icon">
+            <h2>Your Personalized Continuous Authentication System</h2>
+            <p>Protect your sensitive files and folders with Dyn-Auth, a security system that continuously verifies your identity based on your unique keystroke dynamics and mouse movement patterns.</p>
+            <a href="{{ url_for('signup') }}" class="cta-button">Get Started</a>
+        </header>
+        
+    </div>
+</body>
+</html>

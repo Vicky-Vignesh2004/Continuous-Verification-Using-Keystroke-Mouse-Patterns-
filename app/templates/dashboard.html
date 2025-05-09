@@ -1,0 +1,226 @@
+<!-- dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboardstyle.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="#" class="logo">Dyn-Auth</a>
+        <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
+    </nav>
+    
+    <h1>Dashboard</h1>
+    
+    <!-- Number of Users -->
+    <div class="dashboard-section">
+        <h2>Total Users: {{ total_users }}</h2>
+    </div>
+    
+    <!-- Files/Folders Section -->
+    <div class="dashboard-section">
+        <h2>Manage Secured Files</h2>
+    
+        {% if secured_files and secured_files[0] != "empty" %}
+            <ul>
+                {% for item in secured_files %}
+                    <li>{{ item['filename'] }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No secured files or folders.</p>
+        {% endif %}
+    
+        <!-- Button to Open Manage Files Page -->
+        <a href="{{ url_for('manage_files') }}" class="manage-files-btn">Manage Files</a>
+    </div>
+    
+    
+    <!-- Show Keystroke Dynamics Graph -->
+    <div class="dashboard-section">
+        <h2>Keystroke  Analysis</h2>
+    
+        {% if keystroke_plot %}
+            <div class="plot-container"></div>
+            <img src="{{ url_for('plot', filename=keystroke_plot) }}" 
+                 alt="Keystroke Dynamics Plot" 
+                 style="width:100%; max-width:600px; display: block; margin: auto;"
+                 class="plot-image">
+        {% else %}
+            <p>No keystroke data available for visualization.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Show Keystroke heatmap Graph -->
+    <div class="dashboard-section">
+        <h2>Keystroke heatmap Analysis</h2>
+    
+        {% if keystroke_heatmap_plot %}
+            <div class="plot-container"></div>
+            <img src="{{ url_for('plot', filename=keystroke_heatmap_plot) }}" 
+                 alt="Keystroke heatmap Plot" 
+                 style="width:100%; max-width:600px; display: block; margin: auto;"
+                 class="plot-image">
+        {% else %}
+            <p>No keystroke data available for visualization.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Recent Keystroke & Mouse Data -->
+    <div class="dashboard-section">
+        <h2>Activity count</h2>
+        <p><strong>Keystrokes event count:</strong> {{ keystroke_events_data_count }}</p>
+        <p><strong>Keystrokes feature count:</strong> {{ keystroke_features_data_count }}</p>
+        <p><strong>Mouse event count:</strong> {{ mouse_events_data_count }}</p>
+        <p><strong>Mouse feature count:</strong> {{ mouse_features_data_count }}</p>
+    </div>
+
+    <!-- Keystroke event Data Table -->
+    <div class="dashboard-section" id="keystroke-section">
+        <div class="data-section">
+            <h3>Keystroke event Data ({{ keystroke_events_data_count }} total events)</h3>
+    
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Key-code</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in keystroke_events_data %}
+                        <tr>
+                            <td>{{ row['event_type'] }}</td>
+                            <td>{{ row['key_code'] }}</td>
+                            <td>{{ row['timestamp'] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Keystroke feature Data Table -->
+    <div class="dashboard-section" id="keystroke-section">
+        <div class="data-section">
+            <h3>Keystroke features Data ({{ keystroke_features_data_count }} total events)</h3>
+    
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>From key</th>
+                            <th>To key</th>
+                            <th>Dwell-Time</th>
+                            <th>Flight-Time</th>
+                            <th>Press-press</th>
+                            <th>Release-release</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in keystroke_features_data %}
+                        <tr>
+                            <td>{{ '<space>' if row['key1'] == ' ' else row['key1'] }}</td>
+                            <td>{{ '<space>' if row['key2'] == ' ' else row['key2'] }}</td>
+                            <td>{{ row['dwell_time'] }}</td>
+                            <td>{{ row['flight_time'] }}</td>
+                            <td>{{ row['pp_time'] }}</td>
+                            <td>{{ row['rr_time'] }}</td>
+                            <td>{{ row['timestamp'] | datetimeformat }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mouse Event Data Table -->
+    <div class="dashboard-section" id="keystroke-section">
+        <div class="data-section">
+            <h3>Mouse events ({{ mouse_events_data_count }} total events)</h3>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>X</th>
+                            <th>Y</th>
+                            <th>Button</th>
+                            <th>pressed</th>
+                            <th>Timestamp</th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in mouse_events_data %}
+                        <tr>
+                            <td>{{ row['event_type'] }}</td>
+                            <td>{{ row['x'] }}</td>
+                            <td>{{ row['y'] }}</td>
+                            <td>{{ row['button'] }}</td>
+                            <td>{{ row['pressed'] }}</td>
+                            <td>{{ row['timestamp'] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mouse feature Data Table -->
+    <div class="dashboard-section" id="keystroke-section">
+        <div class="data-section">
+            <h3>Mouse feature ({{ mouse_features_data_count }} total events)</h3>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Distance</th>
+                            <th>Velocity</th>
+                            <th>Angle</th>
+                            <th>Acceleration</th>
+                            <th>Curvature</th>
+                            <th>Timestamp</th>                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in mouse_features_data %}
+                        <tr>
+                            <td>{{ "%.4f"|format(row['distance']) if row['distance'] is not none else '-' }}</td>
+                            <td>{{ "%.4f"|format(row['velocity']) if row['velocity'] is not none else '-' }}</td>
+                            <td>{{ "%.4f"|format(row['angle']) if row['angle'] is not none else '-' }}</td>
+                            <td>{{ "%.4f"|format(row['acceleration']) if row['acceleration'] is not none else '-' }}</td>
+                            <td>{{ "%.4f"|format(row['curvature']) if row['curvature'] is not none else '-' }}</td>
+                            <td>{{ row['timestamp'] | datetimeformat }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- File Access Logs -->
+    <div class="dashboard-section">
+        <h2>File Access Logs</h2>
+        {% if access_logs and access_logs[0] != "empty" %}
+            <ul>
+                {% for log in access_logs %}
+                    <li>{{ log }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No recent file access logs.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

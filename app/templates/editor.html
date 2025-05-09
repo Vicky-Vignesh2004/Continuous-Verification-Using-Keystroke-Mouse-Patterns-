@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editing {{ file_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .editor-container {
+            margin-top: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .editor-header {
+            background-color: #343a40;
+            color: white;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #editor {
+            height: 500px;
+            width: 100%;
+            border: 1px solid #ddd;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            padding: 10px;
+        }
+        .btn-save {
+            margin-right: 10px;
+        }
+        .file-info {
+            font-size: 0.9rem;
+        }
+        /* Add to your CSS file */
+        #editor {
+            transition: border-color 0.3s ease;
+        }
+        #editor.border-success {
+            border: 2px solid #28a745 !important;
+        }
+        #editor.border-danger {
+            border: 2px solid #dc3545 !important;
+        }
+        #editor.locked {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+        }
+        .auth-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .auth-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 600px;
+        }
+        #authText {
+            font-family: 'Courier New', monospace;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 3px;
+            margin-bottom: 15px;
+        }
+        #authChallenge {
+            width: 100%;
+            height: 100px;
+            font-family: 'Courier New', monospace;
+        }
+        .progress-container {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="editor-container">
+            <div class="editor-header">
+                <span>{{ file_name }}</span>
+                <div>
+                    <button id="saveBtn" class="btn btn-primary btn-sm btn-save">Save</button>
+                    <a href="{{ url_for('manage_files') }}" class="btn btn-secondary btn-sm">Back to Files</a>
+                </div>
+            </div>
+            <textarea id="editor">{{ file_content }}</textarea>
+            <div class="p-2 bg-light file-info">
+                <small>Last modified: {{ file_modified_time if file_modified_time else 'Unknown' }}</small>
+            </div>
+        </div>
+    </div>
+
+   
+
+    <!-- Toast for save notifications -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="saveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">File Saved</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                Your changes have been saved successfully.
+            </div>
+        </div>
+    </div>
+    <!-- Add this near your save toast -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="authToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">Typing Verification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                <!-- Content will be filled by JavaScript -->
+            </div>
+        </div>
+    </div>
+    <div id="authModal" class="auth-modal">
+        <div class="auth-content">
+            <h4>Authentication Required</h4>
+            <p>Please type the following text exactly to verify your identity:</p>
+            <div id="authText">
+                <p>The quick brown fox jumps over the lazy dog near the quiet riverbank. It is a calm, peaceful day, and the animals roam freely under the wide, open sky, feeling the cool breeze blowing through the trees.</p>
+            </div>
+            <textarea id="authChallenge" placeholder="Type the text above here..."></textarea>
+            <div class="progress-container">
+                <div class="progress">
+                    <div id="authProgress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <small id="authMessage" class="text-muted">Matching: 0%</small>
+            </div>
+            <div class="mt-3">
+                <button id="authSubmit" class="btn btn-primary">Verify</button>
+                <button id="authCancel" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let editor, saveBtn, saveToast;
+        let keystrokeData = [];
+        let lastPressTime = {};
+        let verificationInProgress = false;
+        let isEditorLocked = false;
+        let sessionStartTime = performance.now();
+        let authKeystrokeData = [];
+        let authMouseData = [];
+        let authStartTime = null;
+        let authLastPressTime = {};
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize elements
+            editor = document.getElementById('editor');
+            saveBtn = document.getElementById('saveBtn');
+            saveToast = new bootstrap.Toast(document.getElementById('saveToast'));
+            
+            // Auto-resize and save functionality (unchanged)
+            function adjustHeight() {
+                editor.style.height = 'auto';
+                editor.style.height = (editor.scrollHeight) + 'px';
+            }
+            adjustHeight();
+            editor.addEventListener('input', adjustHeight);
+            
+            saveBtn.addEventListener('click', function() {
+                const content = editor.value;
+                fetch("{{ url_for('save_file', file_id=file_id) }}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content: content})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) saveToast.show();
+                    else alert('Error saving file: ' + (data.error || 'Unknown error'));
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error saving file');
+                });
+                process_Keystroke_mouse_Batch();
+            });
+            
+            // Tab support
+            editor.addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + '\t' + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 1;
+                }
+            });
+    
+            // Initialize authentication challenge elements
+            const authModal = document.getElementById('authModal');
+            const authChallenge = document.getElementById('authChallenge');
+            const authSubmit = document.getElementById('authSubmit');
+            const authCancel = document.getElementById('authCancel');
+            const authProgress = document.getElementById('authProgress');
+            const authMessage = document.getElementById('authMessage');
+            const targetText = document.getElementById('authText').textContent.trim();
+    
+            // Keystroke monitoring
+            let keystrokeData = [];
+            const BATCH_SIZE = 40; // Increased from 10 to 40
+            const KEEP_LAST_EVENTS = 15; // Keep last 6 events for continuity
+
+            // Track key presses
+            editor.addEventListener('keydown', function(e) {
+                const now = performance.now();
+                
+                // Skip modifier keys
+                if (e.ctrlKey || e.altKey || e.metaKey || 
+                    ['Control', 'Alt', 'Meta', 'Shift'].includes(e.key)) {
+                    return;
+                }
+                
+                // Record press event
+                if (!lastPressTime[e.key]) {
+                    keystrokeData.push({
+                        key: e.key,
+                        event: 'press',
+                        time: Date.now(), // Unix timestamp in ms
+                        relativeTime: (now - sessionStartTime) / 1000 // Seconds since load
+                    });
+                    lastPressTime[e.key] = now;
+                }
+                
+                // Process larger batch
+                if (keystrokeData.length >= BATCH_SIZE) {
+                    process_Keystroke_mouse_Batch();
+                }
+            });
+
+            // Track key releases
+            editor.addEventListener('keyup', function(e) {
+                const now = performance.now();
+                
+                // Skip modifier keys
+                if (e.ctrlKey || e.altKey || e.metaKey || 
+                    ['Control', 'Alt', 'Meta', 'Shift'].includes(e.key)) {
+                    return;
+                }
+                
+                keystrokeData.push({
+                    key: e.key,
+                    event: 'release',
+                    time: Date.now(),
+                    relativeTime: (now - sessionStartTime) / 1000
+                });
+                delete lastPressTime[e.key];
+            });
+            
+            let mouseData = [];
+            let lastMouseTime = 0;
+
+            document.addEventListener('mousemove', function(e) {
+                const now = performance.now();
+                // Limit recording frequency (e.g., every 50ms)
+                if (now - lastMouseTime > 50) {
+                    mouseData.push({
+                        x: e.clientX,
+                        y: e.clientY,
+                        time: Date.now(), // Unix timestamp
+                        relativeTime: (now - sessionStartTime) / 1000
+                    });
+                    lastMouseTime = now;
+                }
+            });
+            
+
+
+            function process_Keystroke_mouse_Batch() {
+                if (keystrokeData.length < BATCH_SIZE || verificationInProgress) return;
+                
+                verificationInProgress = true;
+                editor.classList.add('border-warning');
+
+                const batchToSend = [...keystrokeData];
+                keystrokeData = keystrokeData.slice(-KEEP_LAST_EVENTS); // Keep last few events
+                
+                const mouseToSend = mouseData.length > 0 ? [...mouseData] : null;
+                // Reset mouse data (optional to prevent duplicate sending)
+                mouseData = mouseData.slice(-KEEP_LAST_EVENTS);
+                
+                fetch("{{ url_for('process_Keystrokes_mouse', file_id=file_id) }}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        keystrokes: batchToSend,
+                        batch_size: BATCH_SIZE, // Send batch size info to backend
+                        mouse_data: mouseToSend // Uncomment if you want to send mouse data
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Server error');
+                    return response.json();
+                })
+                .then(data => handleVerificationResult(data.verification))
+                .catch(error => {
+                    console.error('Keystroke verification failed:', error);
+                    const authToast = document.getElementById('authToast');
+                    const toastBody = authToast.querySelector('.toast-body');
+                    const toastInstance = bootstrap.Toast.getOrCreateInstance(authToast);
+                    toastBody.innerHTML = `
+                        <span class="text-danger">⚠ Verification error</span>
+                        <small class="text-muted">${error.message || 'Please try again'}</small>
+                    `;
+                    toastInstance.show();
+                })
+                .finally(() => {
+                    verificationInProgress = false;
+                    editor.classList.remove('border-warning');
+                });
+            }
+    
+            function handleVerificationResult(verification) {
+                if (!verification) return;
+                
+                const authToast = document.getElementById('authToast');
+                const toastBody = authToast.querySelector('.toast-body');
+                const toastInstance = bootstrap.Toast.getOrCreateInstance(authToast);
+                
+                if (!verification.hasOwnProperty('match')) {
+                    toastBody.innerHTML = `
+                        <span class="text-warning">⚠ Verification in progress</span>
+                        <small class="text-muted">Collecting more typing data...</small>
+                    `;
+                    editor.classList.remove('border-success', 'border-danger');
+                    toastInstance.show();
+                    return;
+                }
+                
+                if (verification.match) {
+                    toastBody.innerHTML = `
+                        <span class="text-success">✔ Typing pattern verified</span>
+                        <small class="text-muted">Confidence: ${Math.round(verification.confidence * 100)}%</small>
+                    `;
+                    editor.classList.remove('border-danger', 'locked');
+                    editor.classList.add('border-success');
+                    setTimeout(() => editor.classList.remove('border-success'), 2000);
+                    isEditorLocked = false;
+                } else {
+                    toastBody.innerHTML = `
+                        <span class="text-danger">⚠ Typing pattern deviation</span>
+                        <small class="text-muted">Confidence: ${Math.round(verification.confidence * 100)}%</small>
+                    `;
+                    editor.classList.remove('border-success');
+                    editor.classList.add('border-danger', 'locked');
+                    isEditorLocked = true;
+                    showAuthChallenge();
+                }
+                toastInstance.show();
+            }
+    
+            // Authentication challenge functions
+            function showAuthChallenge() {
+                authModal.style.display = 'flex';
+                authChallenge.value = '';
+                authChallenge.focus();
+                updateAuthProgress();
+
+                authStartTime = performance.now();
+                authKeystrokeData = [];
+                authMouseData = [];
+                authLastPressTime = {};
+            }
+
+    
+            function hideAuthChallenge() {
+                authModal.style.display = 'none';
+            }
+    
+            function updateAuthProgress() {
+                const typedText = authChallenge.value;
+                let matchCount = 0;
+                
+                for (let i = 0; i < typedText.length && i < targetText.length; i++) {
+                    if (typedText[i] === targetText[i]) matchCount++;
+                }
+                
+                const progress = (matchCount / targetText.length) * 100;
+                authProgress.style.width = `${progress}%`;
+                authMessage.textContent = `Matching: ${Math.round(progress)}%`;
+                
+                authProgress.classList.toggle('bg-success', progress > 90);
+                authProgress.classList.toggle('bg-warning', progress > 50 && progress <= 90);
+            }
+    
+            function verifyAuthChallenge() {
+                const typedText = authChallenge.value.trim();
+                
+                fetch("{{ url_for('verify_auth_challenge', file_id=file_id) }}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        typed_text: typedText,
+                        target_text: targetText,
+                        keystrokes: authKeystrokeData,
+                        mouse_data: authMouseData
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Verification request failed');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        editor.classList.remove('border-danger', 'locked');
+                        isEditorLocked = false;
+
+                        const authToast = document.getElementById('authToast');
+                        const toastBody = authToast.querySelector('.toast-body');
+                        const toastInstance = bootstrap.Toast.getOrCreateInstance(authToast);
+                        toastBody.innerHTML = `<span class="text-success">✔ Re-authentication successful</span>`;
+                        toastInstance.show();
+                        hideAuthChallenge();
+                    } else {
+                        alert('Authentication failed. Please try again.');
+                        authChallenge.focus();
+                    }
+                })
+                .catch(error => {
+                    alert('Authentication error: ' + error.message);
+                });
+            }
+
+    
+
+            // Event listeners
+            authChallenge.addEventListener('input', updateAuthProgress);
+            authChallenge.addEventListener('keydown', function(e) {
+                const now = performance.now();
+                if (e.ctrlKey || e.altKey || e.metaKey || ['Control', 'Alt', 'Meta', 'Shift'].includes(e.key)) return;
+
+                if (!authLastPressTime[e.key]) {
+                    authKeystrokeData.push({
+                        key: e.key,
+                        event: 'press',
+                        time: Date.now(),
+                        relativeTime: (now - authStartTime) / 1000
+                    });
+                    authLastPressTime[e.key] = now;
+                }
+            });
+
+            authChallenge.addEventListener('keyup', function(e) {
+                const now = performance.now();
+                if (e.ctrlKey || e.altKey || e.metaKey || ['Control', 'Alt', 'Meta', 'Shift'].includes(e.key)) return;
+
+                authKeystrokeData.push({
+                    key: e.key,
+                    event: 'release',
+                    time: Date.now(),
+                    relativeTime: (now - authStartTime) / 1000
+                });
+                delete authLastPressTime[e.key];
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!authStartTime || authModal.style.display !== 'flex') return;
+                const now = performance.now();
+                authMouseData.push({
+                    x: e.clientX,
+                    y: e.clientY,
+                    time: Date.now(),
+                    relativeTime: (now - authStartTime) / 1000
+                });
+            });
+
+
+            authSubmit.addEventListener('click', verifyAuthChallenge);
+            authCancel.addEventListener('click', hideAuthChallenge);
+            
+            // Lock editing when needed
+            const blockEdit = e => { if (isEditorLocked) e.preventDefault(); };
+            editor.addEventListener('keydown', blockEdit);
+            editor.addEventListener('paste', blockEdit);
+            editor.addEventListener('cut', blockEdit);
+            editor.addEventListener('copy', blockEdit);
+        });
+    </script>
+</body>
+</html>

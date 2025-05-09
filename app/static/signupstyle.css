@@ -1,0 +1,146 @@
+/* signupstyle.css */
+
+/* Global Styles */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    background-image: url("/static/bg.png");
+    background-size: cover; /* Ensure the background covers the whole page */
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.welcome-message {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.welcome-message h1 {
+    font-size: 2em;
+    color: black;
+}
+
+h1 {
+    color: #0077b5; /* LinkedIn blue color */
+}
+
+/* Signup Container */
+.signup-container {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: 300px;
+    text-align: center;
+    color: black;
+}
+
+/* Form Styles */
+.signup-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.signup-form input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+}
+.signup-form label {
+    display: block;
+    text-align: left;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+
+.signup-form button {
+    background: blue;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.signup-form button:hover {
+    background: #0056b3;
+}
+
+
+
+.signup-form a {
+    text-decoration: none;
+    color: #6a5acd; /* Set default color */
+}
+
+.signup-form a:hover {
+    color: #ff6347; /* Change color when hovered */
+}
+
+.signup-form p {
+    font-size: 14px;
+}
+
+.signup-form p a {
+    color: #6a5acd; /* Set color for "Register" link */
+}
+
+.signup-form p a:hover {
+    color: #ff6347; /* Change color when hovered */
+}
+
+
+h2 {
+    text-align: center;
+    color: #333; /* Darker text color */
+}
+.flash-messages {
+    margin-bottom: 20px;
+}
+.flash.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+}
+.flash.success {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 10px;
+    border: 1px solid #c3e6cb;
+    border-radius: 5px;
+}
+
+.flash-messages .flash.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.flash-messages .flash.success {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 10px;
+    border: 1px solid #c3e6cb;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+
+
+
